@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
+	"log"
 	"math/rand"
 	"os"
+	"path"
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -430,39 +433,113 @@ func PressedKeys() []byte {
 	return keys
 }
 
-func main() {
-	args := os.Args
-	romPath := "roms/5-quirks.ch8"
+var currentRomCursorIndex int
+var availableRoms []string
 
-	if len(args) == 2 {
-		romPath = args[1]
+func RenderRomSelectScreen(cpu *Chip8) {
+	rl.ClearBackground(rl.RayWhite)
+
+	if rl.IsKeyReleased(rl.KeyDown) {
+		currentRomCursorIndex++
+		currentRomCursorIndex %= len(availableRoms)
+	} else if rl.IsKeyReleased(rl.KeyUp) {
+		currentRomCursorIndex--
+		currentRomCursorIndex %= len(availableRoms)
+	} else if rl.IsKeyReleased(rl.KeyEnter) {
+		BootCpu(cpu, availableRoms[currentRomCursorIndex])
+		currentScreen = EmulatorScreen
 	}
 
-	cpu := new(Chip8)
+	baseY := float32(30)
+	baseX := float32(45)
+
+	for i, romPath := range availableRoms {
+		s := fmt.Sprintf("%d - %s", i, romPath)
+		currentY := int(baseY)*(i+1) - 6*i
+
+		if currentY >= FB_HEIGHT*WINDOW_SCALING {
+			baseX += 120
+		}
+
+		rl.DrawText(s, int32(baseX), int32(currentY), 14, rl.DarkGray)
+
+		if currentRomCursorIndex == i {
+			rl.DrawCircle(int32(baseX)-10, int32(currentY)+6, 5, rl.Red)
+		}
+	}
+
+}
+
+func BootCpu(cpu *Chip8, romPath string) {
 	var rom []byte
 
 	if len(romPath) != 0 {
-		rom = loadRom(romPath)
+		rom = loadRom(path.Join("roms", romPath))
 	}
-
-	rl.InitWindow(FB_WIDTH*WINDOW_SCALING, FB_HEIGHT*WINDOW_SCALING, "chip8 emulator")
-	defer rl.CloseWindow()
-
-	rl.SetTargetFPS(60)
 
 	cpu.Initialize(rom)
 	go cpu.Timers()
 	go cpu.Run()
+}
+
+func RenderEmulatorScreen(cpu *Chip8) {
+	rl.ClearBackground(rl.DarkGray)
+
+	cpu.UpdateKeyboard(PressedKeys())
+	// cpu.Step()
+
+	cpu.Display()
+	// cpu.PrintDebugCompact()
+}
+
+type Screen int
+
+const (
+	RomSelect Screen = iota
+	EmulatorScreen
+)
+
+var currentScreen Screen
+
+func listRoms() []string {
+	root := os.DirFS("roms")
+
+	mdFiles, err := fs.Glob(root, "*.ch8")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var files []string
+	for _, v := range mdFiles {
+		files = append(files, v)
+	}
+	return files
+}
+
+func init() {
+	currentScreen = RomSelect
+	currentRomCursorIndex = 0
+	availableRoms = listRoms()
+}
+
+func main() {
+	cpu := new(Chip8)
+
+	rl.InitWindow(FB_WIDTH*WINDOW_SCALING, FB_HEIGHT*WINDOW_SCALING, "chip8 emulator")
+	defer rl.CloseWindow()
+
+	rl.SetTargetFPS(30)
 
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 
-		rl.ClearBackground(rl.DarkGray)
-		cpu.UpdateKeyboard(PressedKeys())
-		// cpu.Step()
-
-		cpu.Display()
-		// cpu.PrintDebugCompact()
+		switch currentScreen {
+		case RomSelect:
+			RenderRomSelectScreen(cpu)
+		case EmulatorScreen:
+			RenderEmulatorScreen(cpu)
+		}
 
 		rl.EndDrawing()
 	}
