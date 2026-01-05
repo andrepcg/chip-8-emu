@@ -15,6 +15,8 @@ const (
 	WINDOW_SCALING      = 13
 	DIGITS_LEN          = 5
 	CHIP8_PROGRAM_START = 0x200
+	CPU_SPEED_HZ        = 700
+	TIMERS_HZ           = 60
 )
 
 var KEY_MAP = map[int32]byte{
@@ -34,21 +36,6 @@ var KEY_MAP = map[int32]byte{
 	rl.KeySeven: 0x7,
 	rl.KeyEight: 0x8,
 	rl.KeyNine:  0x9,
-}
-
-type Cpu interface {
-	Initialize(rom []byte)
-	Fetch() uint16
-	DecodeExecute(instruction uint16)
-	Step()
-	StackPush(value uint16)
-	StackPop() uint16
-	UpdateKeyboard(pressedKeys []byte)
-	IsKeyPressed(key uint16) bool
-	IsAnyKeyPressed() bool
-	PressedKeys() []uint8
-	PrintDebugCompact()
-	Run(steps int)
 }
 
 type Chip8 struct {
@@ -409,7 +396,7 @@ func (cpu *Chip8) Timers() {
 func (cpu *Chip8) Run() {
 	for {
 		cpu.Step()
-		time.Sleep(time.Second / 700) // ~700 Hz
+		time.Sleep(time.Second / CPU_SPEED_HZ) // ~700 Hz
 	}
 }
 
