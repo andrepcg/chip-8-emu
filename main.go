@@ -118,11 +118,17 @@ func renderCpuDebug(cpu *chip8.Chip8) {
 	rl.DrawTextEx(monoFont, sb.String(), rl.Vector2{X: 0, Y: 0}, 15, 0, rl.RayWhite)
 }
 
+// 60Hz
 func RenderEmulatorScreen(cpu *chip8.Chip8) {
 	rl.ClearBackground(rl.DarkGray)
 
 	cpu.UpdateKeyboard(PressedKeys())
-	// cpu.Step()
+
+	cpu.UpdateTimers()
+
+	for range chip8.OPERATIONS_PER_SEC {
+		cpu.Step()
+	}
 
 	RenderDisplay(cpu)
 	// cpu.PrintDebugCompact()

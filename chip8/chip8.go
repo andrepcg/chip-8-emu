@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"os"
 	"path"
-	"time"
 )
 
 const (
@@ -13,7 +12,7 @@ const (
 	FB_HEIGHT           = 32
 	CHIP8_PROGRAM_START = 0x200
 	DIGITS_LEN          = 5
-	CPU_SPEED_HZ        = 1000
+	OPERATIONS_PER_SEC  = 16
 )
 
 type Chip8 struct {
@@ -40,9 +39,6 @@ func (cpu *Chip8) Initialize(romPath string) {
 	cpu.PC = CHIP8_PROGRAM_START
 
 	println("Initialization complete")
-
-	go cpu.Timers()
-	go cpu.Run()
 }
 
 func LoadRomFromFile(filePath string) []byte {
@@ -330,30 +326,13 @@ func (cpu *Chip8) DecodeExecute(instruction uint16) {
 
 }
 
-func (cpu *Chip8) Timers() {
-	for {
-		if cpu.ST > 0 {
-			cpu.ST -= 1
-		}
-
-		if cpu.DT > 0 {
-			cpu.DT -= 1
-		}
-
-		time.Sleep(time.Second / 60)
+func (cpu *Chip8) UpdateTimers() {
+	if cpu.ST > 0 {
+		cpu.ST -= 1
 	}
-}
 
-func (cpu *Chip8) Run() {
-	lastStep := time.Now()
-	for {
-		elapsed := time.Since(lastStep)
-		if elapsed < time.Second/CPU_SPEED_HZ {
-			time.Sleep((time.Second / CPU_SPEED_HZ) - elapsed)
-		}
-		lastStep = time.Now()
-		cpu.Step()
-		// time.Sleep(time.Second / CPU_SPEED_HZ) // ~700 Hz
+	if cpu.DT > 0 {
+		cpu.DT -= 1
 	}
 }
 
