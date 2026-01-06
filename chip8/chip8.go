@@ -13,7 +13,7 @@ const (
 	FB_HEIGHT           = 32
 	CHIP8_PROGRAM_START = 0x200
 	DIGITS_LEN          = 5
-	CPU_SPEED_HZ        = 700
+	CPU_SPEED_HZ        = 1000
 )
 
 type Chip8 struct {
@@ -23,7 +23,7 @@ type Chip8 struct {
 	STACK       [16]uint16
 	FRAMEBUFFER [FB_WIDTH * FB_HEIGHT]bool
 	RAM         [4096]byte
-	KEYBOARD    [16]bool // 1 2 3 C 4 5 6 D 7 8 9 E A 0 B F
+	KEYBOARD    uint16
 }
 
 func (cpu *Chip8) Initialize(romPath string) {
@@ -80,24 +80,19 @@ func (cpu *Chip8) IsKeyPressed(key byte) bool {
 	if key > 15 {
 		return false
 	}
-	return cpu.KEYBOARD[key]
+	return (cpu.KEYBOARD>>uint16(16-1-key))&0x1 > 0
 }
 
 func (cpu *Chip8) IsAnyKeyPressed() bool {
-	for _, k := range cpu.KEYBOARD {
-		if k {
-			return true
-		}
-	}
-
-	return false
+	return cpu.KEYBOARD > 0
 }
 
 func (cpu *Chip8) PressedKeys() []uint8 {
 	var keys []uint8
-	for i, k := range cpu.KEYBOARD {
-		if k {
-			keys = append(keys, uint8(i))
+
+	for k := byte(0x0); k < 0xF; k++ {
+		if cpu.IsKeyPressed(k) {
+			keys = append(keys, uint8(k))
 		}
 	}
 
@@ -105,12 +100,9 @@ func (cpu *Chip8) PressedKeys() []uint8 {
 }
 
 func (cpu *Chip8) UpdateKeyboard(pressedKeys []byte) {
-	for i := range cpu.KEYBOARD {
-		cpu.KEYBOARD[i] = false
-	}
-
+	cpu.KEYBOARD = 0
 	for _, v := range pressedKeys {
-		cpu.KEYBOARD[v] = true
+		cpu.KEYBOARD |= uint16(1) << (16 - 1 - v)
 	}
 }
 
@@ -146,8 +138,6 @@ func (cpu *Chip8) DrawSprite(vx, vy byte, bytes []byte) {
 	cpu.V[0xF] = 0
 
 	for dy, v := range bytes {
-		// v = 00001000
-
 		for index := byte(0); index < 8; index += 1 {
 			dx := 8 - 1 - index
 			pixel := ((v >> dx) & 1) > 0
@@ -355,9 +345,15 @@ func (cpu *Chip8) Timers() {
 }
 
 func (cpu *Chip8) Run() {
+	lastStep := time.Now()
 	for {
+		elapsed := time.Since(lastStep)
+		if elapsed < time.Second/CPU_SPEED_HZ {
+			time.Sleep((time.Second / CPU_SPEED_HZ) - elapsed)
+		}
+		lastStep = time.Now()
 		cpu.Step()
-		time.Sleep(time.Second / CPU_SPEED_HZ) // ~700 Hz
+		// time.Sleep(time.Second / CPU_SPEED_HZ) // ~700 Hz
 	}
 }
 
