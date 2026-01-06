@@ -16,9 +16,9 @@ const (
 	TIMERS_HZ      = 60
 )
 
-var windowWidth int32
-var windowHeight int32
-var showDebug bool
+var windowWidth int32 = chip8.FB_WIDTH * WINDOW_SCALING
+var windowHeight int32 = chip8.FB_HEIGHT * WINDOW_SCALING
+var showDebug bool = false
 var monoFont rl.Font
 
 var KEY_MAP = map[int32]byte{
@@ -66,8 +66,9 @@ func PressedKeys() []byte {
 	return keys
 }
 
-var currentRomCursorIndex int
+var currentRomCursorIndex int = 0
 var availableRoms []string
+var currentScreen Screen = RomSelect
 
 func RenderRomSelectScreen(cpu *chip8.Chip8) {
 	rl.ClearBackground(rl.RayWhite)
@@ -134,8 +135,6 @@ const (
 	EmulatorScreen
 )
 
-var currentScreen Screen
-
 func listRoms() []string {
 	root := os.DirFS("roms")
 
@@ -153,11 +152,7 @@ func listRoms() []string {
 }
 
 func init() {
-	currentScreen = RomSelect
-	currentRomCursorIndex = 0
 	availableRoms = listRoms()
-	windowHeight = chip8.FB_HEIGHT * WINDOW_SCALING
-	windowWidth = chip8.FB_WIDTH * WINDOW_SCALING
 	showDebug = false
 }
 

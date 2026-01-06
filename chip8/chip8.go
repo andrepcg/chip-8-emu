@@ -309,6 +309,7 @@ func (cpu *Chip8) DecodeExecute(instruction uint16) {
 		for !cpu.IsAnyKeyPressed() {
 		} // busy wait
 
+		// FIXME: this is not totally correct
 		cpu.V[x] = cpu.PressedKeys()[0]
 	} else if instruction&0xF0FF == 0xF015 { // Fx15 - LD DT, Vx
 		// DT is set equal to the value of Vx.
@@ -331,16 +332,10 @@ func (cpu *Chip8) DecodeExecute(instruction uint16) {
 		cpu.RAM[cpu.I+2] = cpu.V[x] % 10
 	} else if instruction&0xF0FF == 0xF055 { // Fx55 - LD [I], Vx
 		// The interpreter copies the values of registers V0 through Vx into memory, starting at the address in I.
-
-		for i := uint16(0); i <= x; i++ {
-			cpu.RAM[cpu.I+i] = cpu.V[i]
-		}
+		copy(cpu.RAM[cpu.I:cpu.I+x+1], cpu.V[0:x+1])
 	} else if instruction&0xF0FF == 0xF065 { // Fx65 - LD Vx, [I]
 		// The interpreter reads values from memory starting at location I into registers V0 through Vx.
-
-		for i := uint16(0); i <= x; i++ {
-			cpu.V[i] = cpu.RAM[cpu.I+i]
-		}
+		copy(cpu.V[0:x+1], cpu.RAM[cpu.I:cpu.I+x+1])
 	}
 
 }
