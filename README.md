@@ -12,6 +12,6 @@ This project is a small experiment for me to learn a bit of Go. No AI was used t
 - [x] Keyboard input
 - [x] Proper display rendering (no printf to terminal)
 - [x] Remove the `Cpu` interface, i don't think it serves any purpose
-- [ ] Better clock generation
-- [ ] Beep tone
-- [ ] Would the keyboard be better represented with a `uint16` instead or `[16]bool`?
+- [x] Better clock generation
+- [x] Beep tone
+- [x] Would the keyboard be better represented with a `uint16` instead or `[16]bool`?

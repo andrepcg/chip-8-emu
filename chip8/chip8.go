@@ -50,7 +50,7 @@ func LoadRomFromFile(filePath string) []byte {
 		panic(err)
 	}
 
-	fmt.Printf("Loaded %s. Size = %d bytes", filePath, len(dat))
+	fmt.Printf("Loaded %s. Size = %d bytes\n", filePath, len(dat))
 
 	return dat
 }

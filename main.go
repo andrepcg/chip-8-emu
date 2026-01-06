@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"math"
 	"os"
 	"strings"
+	"unsafe"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -20,6 +22,8 @@ var windowWidth int32 = chip8.FB_WIDTH * WINDOW_SCALING
 var windowHeight int32 = chip8.FB_HEIGHT * WINDOW_SCALING
 var showDebug bool = false
 var monoFont rl.Font
+var tone []int16
+var beepSound rl.Sound
 
 var KEY_MAP = map[int32]byte{
 	rl.KeyA:     0xA,
@@ -122,9 +126,15 @@ func renderCpuDebug(cpu *chip8.Chip8) {
 func RenderEmulatorScreen(cpu *chip8.Chip8) {
 	rl.ClearBackground(rl.DarkGray)
 
-	cpu.UpdateKeyboard(PressedKeys())
+	if rl.IsKeyReleased(rl.KeyX) {
+		showDebug = !showDebug
+	}
 
+	cpu.UpdateKeyboard(PressedKeys())
 	cpu.UpdateTimers()
+	if cpu.ST > 0 {
+		rl.PlaySound(beepSound)
+	}
 
 	for range chip8.OPERATIONS_PER_SEC {
 		cpu.Step()
@@ -157,9 +167,21 @@ func listRoms() []string {
 	return files
 }
 
+func generateTone(frequency float32, durationSeconds float32, sampleRate int32) []int16 {
+	sampleCount := int32(float32(sampleRate) * durationSeconds)
+	tone := make([]int16, sampleCount)
+
+	for i := int32(0); i < sampleCount; i++ {
+		angle := float32(i) * (2.0 * math.Pi * frequency / float32(sampleRate))
+		tone[i] = int16(32767 * math.Sin(float64(angle)))
+	}
+
+	return tone
+}
+
 func init() {
 	availableRoms = listRoms()
-	showDebug = false
+	tone = generateTone(500, 0.1, 44100)
 }
 
 func main() {
@@ -169,6 +191,19 @@ func main() {
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(30)
+
+	rl.InitAudioDevice()
+	defer rl.CloseAudioDevice()
+
+	var wave rl.Wave = rl.Wave{
+		FrameCount: uint32(len(tone)),
+		SampleRate: 44100,
+		Channels:   1,
+		SampleSize: 16,
+		Data:       unsafe.Pointer(&tone[0]),
+	}
+
+	beepSound = rl.LoadSoundFromWave(wave)
 
 	monoFont = rl.LoadFontEx("LTSuperiorMono-Regular.otf", 16, nil, 0)
 
