@@ -39,6 +39,7 @@ func (cpu *Chip8) Initialize(romPath string) {
 	cpu.PC = CHIP8_PROGRAM_START
 
 	println("Initialization complete")
+
 }
 
 func LoadRomFromFile(filePath string) []byte {
@@ -292,8 +293,10 @@ func (cpu *Chip8) DecodeExecute(instruction uint16) {
 	} else if instruction&0xF0FF == 0xF00A { // Fx0A - LD Vx, K
 		// All execution stops until a key is pressed, then the value of that key is stored in Vx.
 
-		for !cpu.IsAnyKeyPressed() {
-		} // busy wait
+		if !cpu.IsAnyKeyPressed() {
+			cpu.PC -= 2
+			return
+		}
 
 		// FIXME: this is not totally correct
 		cpu.V[x] = cpu.PressedKeys()[0]
